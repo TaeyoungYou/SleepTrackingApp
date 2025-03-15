@@ -37,7 +37,7 @@ class _CameraComponentState extends State<CameraComponent> {
             });
 
             _imageCaptureTimer = Timer.periodic(Duration(seconds: 1), (timer){
-              _captureAndSaveImage();
+              //_captureAndSaveImage();
             });
           }
         })
@@ -50,16 +50,16 @@ class _CameraComponentState extends State<CameraComponent> {
           });
         });
   }
-  Future<void> _captureAndSaveImage() async {
-    if(!_isStreaming || _controller == null || !_controller!.value.isInitialized)  return;
-
-    try {
-      final XFile image = await _controller.takePicture();
-      final Directory directory
-    } catch(e){
-      print("Error: $e");
-    }
-  }
+  // Future<void> _captureAndSaveImage() async {
+  //   if(!_isStreaming || _controller == null || !_controller!.value.isInitialized)  return;
+  //
+  //   try {
+  //     final XFile image = await _controller.takePicture();
+  //     final Directory directory
+  //   } catch(e){
+  //     print("Error: $e");
+  //   }
+  // }
 
   void _stopStreaming() async {
     if (_controller != null) {

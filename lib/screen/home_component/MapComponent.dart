@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:unknow/map/google_lib.dart';
 
 import '../../config/colors.dart';
 
@@ -21,7 +22,7 @@ class MapComponent extends StatelessWidget {
           ),
         ],
       ),
-      child: Text("Here is map area"),
+      child: GoogleMapFlutter(),
     );
   }
 }
