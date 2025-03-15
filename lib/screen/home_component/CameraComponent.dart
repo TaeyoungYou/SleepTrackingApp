@@ -1,7 +1,11 @@
 import 'dart:async';
+import 'dart:io';
+import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../config/colors.dart';
 
@@ -19,15 +23,29 @@ class _CameraComponentState extends State<CameraComponent> {
   Future<void>? _initializeControllerFuture;
   bool _isStreaming = false;
   Timer? _imageCaptureTimer;
+  bool _isCapturing = false;
+  int _captureCount = 0;
+  Uint8List? _lastCapturedImage;
 
   @override
   void dispose() {
     _stopStreaming();
+    _controller?.dispose();
     super.dispose();
   }
 
-  void _startStreaming() {
-    _controller ??= CameraController(widget.camera, ResolutionPreset.medium);
+  Future<void> _startStreaming() async {
+    if (_isStreaming) {
+      _stopStreaming();
+      return;
+    }
+
+    _controller = CameraController(
+      widget.camera,
+      ResolutionPreset.medium,
+      enableAudio: false,
+    );
+
     _initializeControllerFuture = _controller!
         .initialize()
         .then((_) {
@@ -36,37 +54,75 @@ class _CameraComponentState extends State<CameraComponent> {
               _isStreaming = true;
             });
 
-            _imageCaptureTimer = Timer.periodic(Duration(seconds: 1), (timer){
-              //_captureAndSaveImage();
+            _imageCaptureTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+              if (!_isCapturing) _captureAndSendImage();
             });
           }
         })
         .catchError((error) {
-          print("Error init camera: $error");
+          print("Error initializing");
           setState(() {
+            _isStreaming = false;
             _controller = null;
             _initializeControllerFuture = null;
-            _isStreaming = false;
           });
         });
   }
-  // Future<void> _captureAndSaveImage() async {
-  //   if(!_isStreaming || _controller == null || !_controller!.value.isInitialized)  return;
-  //
-  //   try {
-  //     final XFile image = await _controller.takePicture();
-  //     final Directory directory
-  //   } catch(e){
-  //     print("Error: $e");
-  //   }
-  // }
 
-  void _stopStreaming() async {
-    if (_controller != null) {
-      await _controller!.dispose();
+  Future<void> _captureAndSendImage() async {
+    print(
+      "======================================Attempting to capture image....",
+    );
+    if (!_isStreaming ||
+        _controller == null ||
+        !_controller!.value.isInitialized) {
+      print("not initialzed");
+      return;
+    }
+    if (_isCapturing) {
+      print("Still capturing");
+      return;
+    }
+    _isCapturing = true;
+
+    try {
+      final XFile image = await _controller!.takePicture();
+      final Uint8List imageBytes = await File(image.path).readAsBytes();
+
       setState(() {
-        _controller = null;
-        _initializeControllerFuture = null;
+        _lastCapturedImage = imageBytes;
+        _captureCount++;
+      });
+
+      print("✅ Capture #$_captureCount recorded, sending to AI...");
+      await sendImageToAI(imageBytes);
+    } catch (e) {
+      print("Error");
+    } finally {
+      _isCapturing = false;
+    }
+  }
+
+  Future<void> sendImageToAI(Uint8List imageBytes) async {
+    print("🛠 [TEST MODE] sendImageToAI() called!");
+    print("📷 Image captured size: ${imageBytes.length} bytes");
+    await Future.delayed(Duration(seconds: 1));
+    print("✅ [TEST MODE] Simulated AI processing complete!");
+  }
+
+  void _stopStreaming() {
+    _imageCaptureTimer?.cancel();
+    _imageCaptureTimer = null;
+    if (_controller != null) {
+      _controller!.dispose().then((_) {
+        setState(() {
+          _controller = null;
+          _initializeControllerFuture = null;
+          _isStreaming = false;
+        });
+      });
+    } else {
+      setState(() {
         _isStreaming = false;
       });
     }
@@ -104,7 +160,14 @@ class _CameraComponentState extends State<CameraComponent> {
         ),
         SizedBox(height: 10),
         GestureDetector(
-          onTap: _isStreaming ? _stopStreaming : _startStreaming,
+          onTap: () {
+            if (_isStreaming) {
+              print("Captured: $_captureCount times");
+              return _stopStreaming();
+            } else {
+              _startStreaming();
+            }
+          },
           child: Container(
             width: 170.5,
             height: 50,
@@ -121,10 +184,14 @@ class _CameraComponentState extends State<CameraComponent> {
                 ),
               ],
             ),
-            child: Text(_isStreaming ? 'ON' : 'OFF',
-            style: TextStyle(color: _isStreaming ? UI_White:UI_Black,
-            fontSize: 16,
-            fontWeight: FontWeight.bold),)
+            child: Text(
+              _isStreaming ? 'ON' : 'OFF',
+              style: TextStyle(
+                color: _isStreaming ? UI_White : UI_Black,
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
           ),
         ),
       ],
