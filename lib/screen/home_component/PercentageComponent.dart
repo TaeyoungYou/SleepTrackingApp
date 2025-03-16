@@ -27,7 +27,7 @@ class _PercentageComponentState extends State<PercentageComponent> {
   @override
   void didUpdateWidget(covariant PercentageComponent oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if(widget.percentage < 50){
+    if(widget.percentage < 40){
       triggerVibration();
     }
   }
