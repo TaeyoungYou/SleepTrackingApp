@@ -4,8 +4,8 @@ import 'dart:typed_data';
 
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
-import 'package:path_provider/path_provider.dart';
-import 'package:permission_handler/permission_handler.dart';
+import 'package:tflite_flutter/tflite_flutter.dart';
+import 'package:image/image.dart' as img;
 
 import '../../config/colors.dart';
 
@@ -24,13 +24,22 @@ class _CameraComponentState extends State<CameraComponent> {
   bool _isStreaming = false;
   Timer? _imageCaptureTimer;
   bool _isCapturing = false;
+  bool _isModelLoaded = false;
   int _captureCount = 0;
-  Uint8List? _lastCapturedImage;
+  late Interpreter _interpreter;
+  double _predictionResult = 0.0;
+
+  @override
+  void initState() {
+    _loadModel();
+    super.initState();
+  }
 
   @override
   void dispose() {
     _stopStreaming();
     _controller?.dispose();
+    _interpreter.close();
     super.dispose();
   }
 
@@ -70,6 +79,10 @@ class _CameraComponentState extends State<CameraComponent> {
   }
 
   Future<void> _captureAndSendImage() async {
+    if(!_isModelLoaded){
+      print("⚠️ Model is not yet loaded, skipping image capture.");
+      return;
+    }
     print(
       "======================================Attempting to capture image....",
     );
@@ -90,24 +103,72 @@ class _CameraComponentState extends State<CameraComponent> {
       final Uint8List imageBytes = await File(image.path).readAsBytes();
 
       setState(() {
-        _lastCapturedImage = imageBytes;
         _captureCount++;
       });
 
       print("✅ Capture #$_captureCount recorded, sending to AI...");
       await sendImageToAI(imageBytes);
     } catch (e) {
-      print("Error");
+      print("================================sendImageToAI");
+      print("Error: $e");
     } finally {
       _isCapturing = false;
     }
   }
 
   Future<void> sendImageToAI(Uint8List imageBytes) async {
-    print("🛠 [TEST MODE] sendImageToAI() called!");
-    print("📷 Image captured size: ${imageBytes.length} bytes");
-    await Future.delayed(Duration(seconds: 1));
-    print("✅ [TEST MODE] Simulated AI processing complete!");
+    _runPrediction(imageBytes);
+  }
+
+  /// 모델 로딩
+  Future<void> _loadModel() async {
+    try {
+      _interpreter = await Interpreter.fromAsset('assets/model.tflite');
+      setState(() {
+        _isModelLoaded = true;
+      });
+    } catch (e) {
+      print("================================_loadModel()");
+      print("Error: $e");
+    }
+  }
+
+  void _runPrediction(Uint8List imageBytes) {
+    if(!_isModelLoaded){
+      print("⚠️ Model is not yet loaded, skipping prediction.");
+      return;
+    }
+    try{
+      // Uint8List -> Image
+      img.Image? image = img.decodeImage(imageBytes);
+      if(image == null) return;
+
+      // 224x224
+      img.Image resizedImage = img.copyResize(image, width: 224, height: 224);
+
+      // image -> float32
+      List<List<List<double>>> inputImage = List.generate(224, (y)=>List.generate(224, (x) {
+        final pixel = resizedImage.getPixel(x, y);
+        return [
+          pixel.getChannel(img.Channel.red) / 255,
+          pixel.getChannel(img.Channel.green) / 255,
+          pixel.getChannel(img.Channel.blue) /255,
+        ];
+      }));
+
+      var output = List.generate(1, (index)=>List.filled(1, 0.0));
+
+      _interpreter.run([inputImage],output);
+
+      setState(() {
+        _predictionResult = output[0][0];
+      });
+
+      print("============================Prediction: $_predictionResult");
+    }catch(e){
+      print("=======================_predict");
+      print("Error: ${e}");
+    }
   }
 
   void _stopStreaming() {
