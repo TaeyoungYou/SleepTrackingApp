@@ -1,6 +1,5 @@
 import 'dart:math';
 
-import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
 import 'package:vibration/vibration.dart';
 import '../../config/colors.dart';
@@ -27,7 +26,7 @@ class _PercentageComponentState extends State<PercentageComponent> {
   @override
   void didUpdateWidget(covariant PercentageComponent oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if(widget.percentage < 50){
+    if(widget.percentage < 40){
       triggerVibration();
     }
   }
