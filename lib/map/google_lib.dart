@@ -21,31 +21,15 @@ class _GoogleMapFlutterState extends State<GoogleMapFlutter> {
   Set<Circle> _circles = {};
   List<LatLng> _trailPoints = [];
   Set<Polyline> _polylines = {};
-  bool _isMoving = false;
   String _mapStyle = "";
   Timer? _recenterTimer;
+  StreamSubscription<Position>? _positionStreamSubscription;
 
   @override
   void initState() {
     super.initState();
     _loadMapStyle();
-    _updateCurrentLocation();
-    //testLocation();
-    _movementManager = MovementManager(
-      onUpdate: (newLocation) {
-        setState(() {
-          _currentLocation = newLocation;
-          _trailPoints.add(newLocation);
-          _updateMap();
-        });
-
-        if (_mapController != null) {
-          _mapController!.animateCamera(
-            CameraUpdate.newLatLng(_currentLocation!),
-          );
-        }
-      },
-    );
+    _initializeLocationStream();
   }
 
   /// Load the custom map style from `assets/map_style.json`
@@ -59,20 +43,41 @@ class _GoogleMapFlutterState extends State<GoogleMapFlutter> {
     }
   }
 
-  void _initializeCircle() {
-    setState(() {
-      _circles.add(
-        Circle(
-          circleId: const CircleId("moving_circle"),
-          center: _currentLocation!,
-          radius: 10,
-          fillColor: UI_White,
-          strokeColor: White_Stroke,
-          strokeWidth: 2,
-        ),
-      );
+  void _initializeLocationStream() async {
+    bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) {
+      print("Cannot serve location service");
+      return;
+    }
+    LocationPermission permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        print("REJECTED LOCATION PERMISSION");
+        return;
+      }
+    }
+
+    _positionStreamSubscription = Geolocator.getPositionStream(
+      locationSettings: LocationSettings(
+        accuracy: LocationAccuracy.bestForNavigation,
+        distanceFilter: 1,
+      ),
+    ).listen((Position position) {
+      print("Received position: ${position.latitude}, ${position.longitude}");
+      LatLng newLocation = LatLng(position.latitude, position.longitude);
+      setState(() {
+        _currentLocation = newLocation;
+        _trailPoints.add(newLocation);
+        _updateMap();
+      });
+      if (_mapController != null) {
+        _mapController!.animateCamera(CameraUpdate.newLatLng(newLocation));
+      }
     });
   }
+
 
   void _updateMap() {
     setState(() {
@@ -98,18 +103,6 @@ class _GoogleMapFlutterState extends State<GoogleMapFlutter> {
     });
   }
 
-  void _toggleMovement() {
-    if (_isMoving) {
-      _movementManager.stopMoving();
-    } else {
-      _movementManager.startMoving();
-    }
-
-    setState(() {
-      _isMoving = !_isMoving;
-    });
-  }
-
   void _resetRecenterTimer() {
     _recenterTimer?.cancel();
     _recenterTimer = Timer(const Duration(seconds: 5), () {
@@ -132,56 +125,14 @@ class _GoogleMapFlutterState extends State<GoogleMapFlutter> {
     super.dispose();
   }
 
-  Future<void> _updateCurrentLocation() async {
-    try{
-      LatLng current = await _getCurrentLocation();
-      setState(() {
-        _currentLocation =current;
-        _trailPoints.add(current);
-      });
-      _initializeCircle();
-    }catch(e){
-      print("Error getting current location: $e");
-    }
-
-  }
-
-  Future<LatLng> _getCurrentLocation() async{
-    bool serviceEnabled;
-    LocationPermission permission;
-
-    serviceEnabled = await Geolocator.isLocationServiceEnabled();
-    if(!serviceEnabled){
-      print("위치 기반 서비스 누락");
-      return Future.error('Location services are disable');
-    }
-
-    permission = await Geolocator.checkPermission();
-    if(permission == LocationPermission.denied){
-      print("위치 허용 거부");
-      permission = await Geolocator.requestPermission();
-      if(permission == LocationPermission.denied){
-        print("위치 허용 2 거부 return");
-        return Future.error("Location permissions are denied");
-      }
-    }
-
-    if(permission == LocationPermission.deniedForever) {
-      print("영원히 거부");
-      return Future.error('Location permission are permanently denied, we cannot request permission');
-    }
-
-    Position position = await Geolocator.getCurrentPosition(
-      desiredAccuracy: LocationAccuracy.bestForNavigation,
-    );
-
-    return LatLng(position.latitude, position.longitude);
-  }
-
   @override
   Widget build(BuildContext context) {
-    if(_currentLocation == null){
-      return Container(width:350, height: 350,child: Center(child: CircularProgressIndicator(),));
+    if (_currentLocation == null) {
+      return Container(
+        width: 350,
+        height: 350,
+        child: Center(child: CircularProgressIndicator()),
+      );
     }
     return Container(
       width: 350,
@@ -207,10 +158,9 @@ class _GoogleMapFlutterState extends State<GoogleMapFlutter> {
     );
   }
 
-
-  void testLocation(){
+  void testLocation() {
     Timer(Duration(seconds: 5), () {
-      if(_currentLocation != null){
+      if (_currentLocation != null) {
         LatLng newLocation = LatLng(
           _currentLocation!.latitude + 1,
           _currentLocation!.longitude + 1,

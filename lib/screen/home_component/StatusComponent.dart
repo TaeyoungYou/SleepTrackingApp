@@ -4,7 +4,8 @@ import 'package:lottie/lottie.dart';
 import '../../config/colors.dart';
 
 class StatusComponent extends StatelessWidget {
-  const StatusComponent({super.key});
+  double result;
+  StatusComponent({required this.result, super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -23,13 +24,22 @@ class StatusComponent extends StatelessWidget {
         ],
       ),
       child: Center(
-        child: Lottie.asset(
-          'assets/emoji/sleep.json',
-          width: 160,
-          height: 160,
-          repeat: true,
-          animate: true,
-        ),
+        child:
+            (result > 0.25)
+                ? Lottie.asset(
+                  'assets/emoji/awake.json',
+                  width: 160,
+                  height: 160,
+                  repeat: true,
+                  animate: true,
+                )
+                : Lottie.asset(
+                  'assets/emoji/sleep.json',
+                  width: 160,
+                  height: 160,
+                  repeat: true,
+                  animate: true,
+                ),
       ),
     );
   }

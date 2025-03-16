@@ -1,16 +1,40 @@
+import 'package:audioplayers/audioplayers.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:unknow/screen/home_component/CameraComponent.dart';
 import 'package:unknow/screen/home_component/MapComponent.dart';
 import 'package:unknow/screen/home_component/PercentageComponent.dart';
 import 'package:unknow/screen/home_component/StatusComponent.dart';
+import 'package:vibration/vibration.dart';
 
 import '../config/colors.dart';
 
-class Home extends StatelessWidget {
+class Home extends StatefulWidget {
   final CameraDescription camera;
 
   const Home({required this.camera, super.key});
+
+  @override
+  State<Home> createState() => _HomeState();
+}
+
+class _HomeState extends State<Home> {
+  final List<double> recentValues = [];
+  double averagedPercentage = 0.0;
+  double cameraValue = 0.0;
+
+  void updateCameraValue(double newValue) {
+    setState(() {
+      cameraValue = newValue;
+      recentValues.add(cameraValue);
+      if(recentValues.length == 5) {
+        averagedPercentage = recentValues.reduce((a,b)=>a+b) * 40;
+        if(averagedPercentage > 100) averagedPercentage = 100;
+        recentValues.clear();
+        print("================================Average: $averagedPercentage");
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -31,12 +55,15 @@ class Home extends StatelessWidget {
                   children: [
                     Column(
                       children: [
-                        StatusComponent(),
+                        StatusComponent(result: cameraValue),
                         SizedBox(height: 20),
-                        PercentageComponent(percentage: 55),
+                        PercentageComponent(percentage: averagedPercentage),
                       ],
                     ),
-                    CameraComponent(camera: camera,),
+                    CameraComponent(
+                      camera: widget.camera,
+                      onValueChanged: updateCameraValue,
+                    ),
                   ],
                 ),
               ],

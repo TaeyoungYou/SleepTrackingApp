@@ -11,8 +11,13 @@ import '../../config/colors.dart';
 
 class CameraComponent extends StatefulWidget {
   final CameraDescription camera;
+  final Function(double) onValueChanged;
 
-  const CameraComponent({required this.camera, super.key});
+  CameraComponent({
+    required this.onValueChanged,
+    required this.camera,
+    super.key,
+  });
 
   @override
   State<CameraComponent> createState() => _CameraComponentState();
@@ -24,22 +29,12 @@ class _CameraComponentState extends State<CameraComponent> {
   bool _isStreaming = false;
   Timer? _imageCaptureTimer;
   bool _isCapturing = false;
-  bool _isModelLoaded = false;
   int _captureCount = 0;
-  late Interpreter _interpreter;
-  double _predictionResult = 0.0;
-
-  @override
-  void initState() {
-    _loadModel();
-    super.initState();
-  }
 
   @override
   void dispose() {
     _stopStreaming();
     _controller?.dispose();
-    _interpreter.close();
     super.dispose();
   }
 
@@ -51,7 +46,7 @@ class _CameraComponentState extends State<CameraComponent> {
 
     _controller = CameraController(
       widget.camera,
-      ResolutionPreset.medium,
+      ResolutionPreset.high,
       enableAudio: false,
     );
 
@@ -63,7 +58,9 @@ class _CameraComponentState extends State<CameraComponent> {
               _isStreaming = true;
             });
 
-            _imageCaptureTimer = Timer.periodic(Duration(seconds: 1), (timer) {
+            _imageCaptureTimer = Timer.periodic(Duration(seconds: 1), (
+              timer,
+            ) {
               if (!_isCapturing) _captureAndSendImage();
             });
           }
@@ -79,10 +76,6 @@ class _CameraComponentState extends State<CameraComponent> {
   }
 
   Future<void> _captureAndSendImage() async {
-    if(!_isModelLoaded){
-      print("⚠️ Model is not yet loaded, skipping image capture.");
-      return;
-    }
     print(
       "======================================Attempting to capture image....",
     );
@@ -117,55 +110,48 @@ class _CameraComponentState extends State<CameraComponent> {
   }
 
   Future<void> sendImageToAI(Uint8List imageBytes) async {
-    _runPrediction(imageBytes);
+    await _runPrediction(imageBytes);
   }
 
-  /// 모델 로딩
-  Future<void> _loadModel() async {
+  Future<void> _runPrediction(Uint8List imageBytes) async {
+    List<double> dataSet = [];
+    Interpreter _interpreter = await Interpreter.fromAsset(
+      'assets/model/CUHACKV7.tflite',
+    );
+
     try {
-      _interpreter = await Interpreter.fromAsset('assets/model.tflite');
-      setState(() {
-        _isModelLoaded = true;
-      });
-    } catch (e) {
-      print("================================_loadModel()");
-      print("Error: $e");
-    }
-  }
-
-  void _runPrediction(Uint8List imageBytes) {
-    if(!_isModelLoaded){
-      print("⚠️ Model is not yet loaded, skipping prediction.");
-      return;
-    }
-    try{
       // Uint8List -> Image
       img.Image? image = img.decodeImage(imageBytes);
-      if(image == null) return;
+      if (image == null) return;
 
       // 224x224
       img.Image resizedImage = img.copyResize(image, width: 224, height: 224);
 
       // image -> float32
-      List<List<List<double>>> inputImage = List.generate(224, (y)=>List.generate(224, (x) {
-        final pixel = resizedImage.getPixel(x, y);
-        return [
-          pixel.getChannel(img.Channel.red) / 255,
-          pixel.getChannel(img.Channel.green) / 255,
-          pixel.getChannel(img.Channel.blue) /255,
-        ];
-      }));
+      List<List<List<double>>> inputImage = List.generate(
+        224,
+        (y) => List.generate(224, (x) {
+          final pixel = resizedImage.getPixel(x, y);
+          return [
+            pixel.getChannel(img.Channel.red) / 255,
+            pixel.getChannel(img.Channel.green) / 255,
+            pixel.getChannel(img.Channel.blue) / 255,
+          ];
+        }),
+      );
 
-      var output = List.generate(1, (index)=>List.filled(1, 0.0));
+      var output = List.generate(1, (index) => List.filled(1, 0.0));
 
-      _interpreter.run([inputImage],output);
+      _interpreter.run([inputImage], output);
 
       setState(() {
-        _predictionResult = output[0][0];
+        double avg = output[0][0];
+        widget.onValueChanged(avg);
+        print("============================Prediction $avg");
       });
 
-      print("============================Prediction: $_predictionResult");
-    }catch(e){
+      _interpreter.close();
+    } catch (e) {
       print("=======================_predict");
       print("Error: ${e}");
     }

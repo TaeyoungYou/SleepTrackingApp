@@ -1,18 +1,37 @@
 import 'dart:math';
 
+import 'package:audioplayers/audioplayers.dart';
 import 'package:flutter/material.dart';
+import 'package:vibration/vibration.dart';
 import '../../config/colors.dart';
 
 class PercentageComponent extends StatefulWidget {
-  final double percentage;
+  double percentage;
 
-  const PercentageComponent({required this.percentage, super.key});
+  PercentageComponent({required this.percentage, super.key});
 
   @override
   State<PercentageComponent> createState() => _PercentageComponentState();
 }
 
 class _PercentageComponentState extends State<PercentageComponent> {
+
+  void triggerVibration() async {
+    if(await Vibration.hasVibrator() ?? false){
+      Vibration.vibrate(duration: 1);
+
+      Vibration.vibrate(pattern: [0,2000,500,2000]);
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant PercentageComponent oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if(widget.percentage < 50){
+      triggerVibration();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -41,7 +60,11 @@ class _PercentageComponentState extends State<PercentageComponent> {
               child: Center(
                 child: Text(
                   "${value.toInt()}%",
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: UI_Black,),
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: UI_Black,
+                  ),
                 ),
               ),
             ),
@@ -60,17 +83,17 @@ class CircularProgressPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     Paint backgroundPaint =
-        Paint()
-          ..color = UI_White
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 8;
+    Paint()
+      ..color = UI_White
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 8;
 
     Paint progressPaint =
-        Paint()
-          ..color = UI_Black
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = 12
-          ..strokeCap = StrokeCap.round;
+    Paint()
+      ..color = UI_Black
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 12
+      ..strokeCap = StrokeCap.round;
 
     Offset center = Offset(size.width / 2, size.height / 2);
     double radius = min(size.width / 2, size.height / 2) - 20;
