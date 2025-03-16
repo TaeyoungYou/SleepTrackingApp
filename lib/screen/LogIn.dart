@@ -1,9 +1,12 @@
 import 'dart:ui';
-
+import 'package:auth0_flutter/auth0_flutter.dart'; // Added for Auth0
 import 'package:camera/camera.dart';
+import 'package:flutter/foundation.dart'; // Added for kDebugMode
 import 'package:flutter/material.dart';
 import 'package:lottie/lottie.dart';
+import 'package:unknow/auth/services/authentication_with_wake_guard.dart'; // Added for auth service
 import 'package:unknow/config/colors.dart';
+import 'package:unknow/screen/profile_page.dart'; // Added for navigation after login
 
 import 'Home.dart';
 
@@ -21,6 +24,7 @@ class _LoginState extends State<Login> with TickerProviderStateMixin {
   late Animation<double> _fadeInSecond;
   late AnimationController _overlayController;
   late Animation<double> _overlayFade;
+  bool _isLoading = false; // Added for loading state
 
   @override
   void initState() {
@@ -62,7 +66,47 @@ class _LoginState extends State<Login> with TickerProviderStateMixin {
   @override
   void dispose() {
     _controller.dispose();
+    _overlayController.dispose(); // Added to dispose overlayController
     super.dispose();
+  }
+
+  // Added method for Universal Login
+  Future<void> _handleUniversalLogin() async {
+    setState(() => _isLoading = true);
+    try {
+      final authService = AuthenticationWithWakeGuard();
+      final credentials = await authService.signIn();
+      // Navigate to Home after successful login
+      Navigator.pushReplacement(
+        context,
+        PageRouteBuilder(
+          transitionDuration: Duration(milliseconds: 500),
+          pageBuilder: (context, animation, secondaryAnimation) => Home(camera: widget.camera),
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            const begin = Offset(1.0, 0.0);
+            const end = Offset.zero;
+            const curve = Curves.easeInOut;
+
+            var tween = Tween(begin: begin, end: end).chain(
+              CurveTween(curve: curve),
+            );
+            return SlideTransition(
+              position: animation.drive(tween),
+              child: child,
+            );
+          },
+        ),
+      );
+    } catch (e) {
+      if (kDebugMode) {
+        print('Login failed: $e');
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Authentication failed')),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
 
   @override
@@ -151,30 +195,8 @@ class _LoginState extends State<Login> with TickerProviderStateMixin {
                     color: Colors.black.withOpacity(0.3),
                     child: Center(
                       child: LoginButton(
-                        onPressed: () {
-                          //TODO:: LogIn
-                          Navigator.pushReplacement(
-                            context,
-                            PageRouteBuilder(
-                              transitionDuration: Duration(milliseconds: 500),
-                              pageBuilder: (context, animation, secondaryAnimation) => Home(camera: widget.camera,),
-                              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                                const begin = Offset(1.0, 0.0);
-                                const end = Offset.zero;
-                                const curve = Curves.easeInOut;
-
-                                var tween = Tween(begin: begin, end: end).chain(
-                                  CurveTween(curve: curve),
-                                );
-                                return SlideTransition(
-                                  position: animation.drive(tween),
-                                  child: child,
-                                );
-                              },
-                            ),
-                          );
-                        },
-                        text: 'START',
+                        onPressed: _isLoading ? null : _handleUniversalLogin, // Updated to handle login
+                        text: _isLoading ? '' : 'START', // Show empty text when loading
                         normalColor: UI_White,
                         pressedColor: background.withOpacity(0.1),
                         textStyle: TextStyle(
@@ -196,7 +218,7 @@ class _LoginState extends State<Login> with TickerProviderStateMixin {
 }
 
 class LoginButton extends StatefulWidget {
-  final VoidCallback onPressed;
+  final VoidCallback? onPressed; // Made nullable to handle disabled state
   final String text;
   final Color normalColor;
   final Color pressedColor;
@@ -241,7 +263,9 @@ class _LoginButtonState extends State<LoginButton> {
             ),
           ],
         ),
-        child: Text(widget.text, style: widget.textStyle),
+        child: widget.text.isEmpty
+            ? CircularProgressIndicator(color: UI_Black) // Show loading indicator
+            : Text(widget.text, style: widget.textStyle),
       ),
     );
   }
