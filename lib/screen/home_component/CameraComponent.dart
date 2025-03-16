@@ -46,7 +46,7 @@ class _CameraComponentState extends State<CameraComponent> {
 
     _controller = CameraController(
       widget.camera,
-      ResolutionPreset.high,
+      ResolutionPreset.medium,
       enableAudio: false,
     );
 

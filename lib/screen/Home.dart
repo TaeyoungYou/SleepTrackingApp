@@ -5,7 +5,6 @@ import 'package:unknow/screen/home_component/CameraComponent.dart';
 import 'package:unknow/screen/home_component/MapComponent.dart';
 import 'package:unknow/screen/home_component/PercentageComponent.dart';
 import 'package:unknow/screen/home_component/StatusComponent.dart';
-import 'package:vibration/vibration.dart';
 
 import '../config/colors.dart';
 
