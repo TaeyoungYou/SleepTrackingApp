@@ -1,4 +1,3 @@
-import 'package:audioplayers/audioplayers.dart';
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:unknow/screen/home_component/CameraComponent.dart';
@@ -30,13 +29,14 @@ class _HomeState extends State<Home> {
       cameraValue = newValue;
       recentValues.add(cameraValue);
       if (recentValues.length == 5) {
-        averagedPercentage = recentValues.reduce((a, b) => a + b) * 40;
+        averagedPercentage = (recentValues.reduce((a, b) => a + b) / 5 - 0.25) * 333.33;
         if (averagedPercentage > 100) averagedPercentage = 100;
+        if(averagedPercentage < 0) averagedPercentage = 0;
         recentValues.clear();
         print("================================Average: $averagedPercentage");
 
         if (averagedPercentage < 20) {
-          showPopup("Warning..! Please reset");
+          showPopup("Warning..! Please reset!!");
         }
       }
     });

@@ -25,7 +25,7 @@ class StatusComponent extends StatelessWidget {
       ),
       child: Center(
         child:
-            (result > 0.25)
+            (result > 0.4)
                 ? Lottie.asset(
                   'assets/emoji/awake.json',
                   width: 160,

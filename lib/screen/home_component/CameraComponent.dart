@@ -116,7 +116,7 @@ class _CameraComponentState extends State<CameraComponent> {
   Future<void> _runPrediction(Uint8List imageBytes) async {
     List<double> dataSet = [];
     Interpreter _interpreter = await Interpreter.fromAsset(
-      'assets/model/CUHACKV7.tflite',
+      'assets/model/CUHACKV8.tflite',
     );
 
     try {
