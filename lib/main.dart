@@ -1,7 +1,6 @@
 import 'package:camera/camera.dart';
 import 'package:flutter/material.dart';
 import 'package:unknow/screen/Home.dart';
-import 'package:unknow/screen/main_view.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -13,9 +12,7 @@ Future<void> main() async {
     MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(fontFamily: 'poppins'),
-      //home: Home(camera: lastCamera),
-      home: MainView(),
-
+      home: Home(camera: lastCamera),
     ),
   );
 }

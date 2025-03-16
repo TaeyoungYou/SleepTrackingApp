@@ -36,6 +36,7 @@ dependencies:
   path_provider: ^2.1.1
   google_maps_flutter: ^2.5.0
   geolocator: ^10.1.0
+  permission_handler: ^11.0.0
   # The following adds the Cupertino Icons font to your application.
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
@@ -45,6 +46,10 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
 
+flutter_icons:
+  android: true
+  ios: true
+  image_path: "assets/icon/WakeGuard.png"
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -67,6 +72,7 @@ flutter:
   assets:
     - assets/emoji/
     - assets/map/
+    - assets/icon/
 
   fonts:
     - family: poppins

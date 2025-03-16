@@ -22,7 +22,10 @@ class MapComponent extends StatelessWidget {
           ),
         ],
       ),
-      child: GoogleMapFlutter(),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(20),
+        child: GoogleMapFlutter(),
+      ),
     );
   }
 }

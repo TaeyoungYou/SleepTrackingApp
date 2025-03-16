@@ -33,7 +33,7 @@ class Home extends StatelessWidget {
                       children: [
                         StatusComponent(),
                         SizedBox(height: 20),
-                        PercentageComponent(percentage: 35),
+                        PercentageComponent(percentage: 55),
                       ],
                     ),
                     CameraComponent(camera: camera,),
